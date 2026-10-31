@@ -555,12 +555,13 @@ Response: `200 OK`
 ```
 
 ### `GET` /reservations/{reservationId}/guest-session-id
-Response: `200 OK`
+Owner-only. Returns `200 OK`:
 ```json
 {
-  "guestSessionId": "string"
+  "guestSessionId": "owner-session-123"
 }
 ```
+Errors: `400` missing reservationId, `401` unauthenticated, `403` caller is not the reservation owner, `404` reservation or owner session not found, `500` internal server error. Error body: `{"error":"..."}`.
 
 
 ### `DELETE` /reservations
@@ -1180,12 +1181,27 @@ Response: 200 OK
 ```
 
 ### `POST` /group-reservations/{groupReservationId}/submit
-Response: 200 OK
+Owner-only. Request body:
 ```json
 {
-  "message": "Group reservation pre-order submitted successfully."
+  "reservationId": "reservation-123"
 }
 ```
+
+Response: `200 OK` (consolidated submitted dishes):
+```json
+[
+  {
+    "dishId": "dish1",
+    "quantity": 3
+  },
+  {
+    "dishId": "dish2",
+    "quantity": 2
+  }
+]
+```
+Errors: `400` invalid request, no submitted sessions/dishes, or order not found; `401` unauthenticated; `403` caller is not the reservation owner; `404` group reservation or reservation not found; `409` group reservation is closed or already submitted; `500` internal server error. Error body: `{"error":"..."}`.
 
 ### `GET` /guest/groups/{groupReservationId}/sessions
 Response: 200 OK

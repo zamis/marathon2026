@@ -1,4 +1,4 @@
-﻿using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DataModel;
 using APIHandler.Constants;
 using System.Collections.Generic;
 
@@ -31,4 +31,7 @@ public class GuestSession
 
     [DynamoDBProperty("isSubmitted")]
     public bool IsSubmitted { get; set; }
+
+    [DynamoDBProperty("sessionVersion")]
+    public long SessionVersion { get; set; }
 }

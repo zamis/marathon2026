@@ -1,4 +1,4 @@
-﻿using Amazon.CognitoIdentityProvider.Model;
+using Amazon.CognitoIdentityProvider.Model;
 using Amazon.Lambda.Core;
 using APIHandler.Constants;
 using APIHandler.Constants.Dishes;
@@ -277,7 +277,7 @@ public class OrderServiceTests
         await _orderService.AddOrderAsync(order);
 
         Assert.Equal(OrderStatus.Created, order.Status);
-        _mockOrderRepository.Verify(r => r.SaveOrderAsync(order), Times.Once);
+        _mockOrderRepository.Verify(r => r.CreateOrderAsync(order), Times.Once);
         _mockNotificationService.Verify(n => n.CreateOrderNotificationAsync("waiter-1", order.OrderId, reservation.Id), Times.Once);
     }
 
@@ -329,7 +329,7 @@ public class OrderServiceTests
         await _orderService.AddOrderForWaiterAsync(order);
 
         Assert.Equal(OrderStatus.Created, order.Status);
-        _mockOrderRepository.Verify(r => r.SaveOrderAsync(order), Times.Once);
+        _mockOrderRepository.Verify(r => r.CreateOrderAsync(order), Times.Once);
     }
 
     [Theory]

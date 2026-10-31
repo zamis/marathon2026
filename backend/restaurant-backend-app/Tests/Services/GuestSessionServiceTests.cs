@@ -125,6 +125,9 @@ public class GuestSessionServiceTests
         int quantityToAdd = 2;
 
         _mockGuestSessionRepository.Setup(r => r.GetByGuestSessionId(guestSession.Id)).ReturnsAsync(guestSession);
+        _mockGuestSessionRepository
+            .Setup(r => r.TryUpdateCartAsync(guestSession, groupReservation))
+            .ReturnsAsync(true);
         _mockGroupReservationRepository.Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId)).ReturnsAsync(groupReservation);
         _mockReservationRepository.Setup(r => r.GetReservationByIdAsync(parentReservation.Id)).ReturnsAsync(parentReservation);
         _mockTableRepository.Setup(r => r.GetTableAsync(table.Id)).ReturnsAsync(table);
@@ -137,7 +140,7 @@ public class GuestSessionServiceTests
         Assert.Equal(quantityToAdd, guestSession.Dishes[0].Quantity);
         Assert.Equal(OrderItemState.Pending, guestSession.Dishes[0].State);
 
-        _mockGuestSessionRepository.Verify(r => r.SaveAsync(guestSession), Times.Once);
+        _mockGuestSessionRepository.Verify(r => r.TryUpdateCartAsync(guestSession, groupReservation), Times.Once);
     }
 
     [Theory]
@@ -155,6 +158,9 @@ public class GuestSessionServiceTests
         dish.State = DishState.Available;
 
         _mockGuestSessionRepository.Setup(r => r.GetByGuestSessionId(guestSession.Id)).ReturnsAsync(guestSession);
+        _mockGuestSessionRepository
+            .Setup(r => r.TryUpdateCartAsync(guestSession, groupReservation))
+            .ReturnsAsync(true);
         _mockGroupReservationRepository.Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId)).ReturnsAsync(groupReservation);
         _mockReservationRepository.Setup(r => r.GetReservationByIdAsync(parentReservation.Id)).ReturnsAsync(parentReservation);
         _mockTableRepository.Setup(r => r.GetTableAsync(table.Id)).ReturnsAsync(table);
@@ -165,7 +171,7 @@ public class GuestSessionServiceTests
         Assert.Single(guestSession.Dishes);
         Assert.Equal(initialQuantity + quantityToAdd, guestSession.Dishes[0].Quantity);
 
-        _mockGuestSessionRepository.Verify(r => r.SaveAsync(guestSession), Times.Once);
+        _mockGuestSessionRepository.Verify(r => r.TryUpdateCartAsync(guestSession, groupReservation), Times.Once);
     }
 
     [Theory]
@@ -283,6 +289,9 @@ public class GuestSessionServiceTests
             .Setup(r => r.GetByGuestSessionId(guestSession.Id))
             .ReturnsAsync(guestSession);
 
+        _mockGuestSessionRepository
+            .Setup(r => r.TryUpdateCartAsync(guestSession, groupReservation))
+            .ReturnsAsync(true);
 
         _mockGroupReservationRepository
             .Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
@@ -293,7 +302,7 @@ public class GuestSessionServiceTests
         Assert.Single(guestSession.Dishes);
         Assert.Equal(initialQuantity - quantityToRemove, guestSession.Dishes[0].Quantity);
 
-        _mockGuestSessionRepository.Verify(r => r.SaveAsync(guestSession), Times.Once);
+        _mockGuestSessionRepository.Verify(r => r.TryUpdateCartAsync(guestSession, groupReservation), Times.Once);
     }
 
     [Theory]
@@ -313,6 +322,10 @@ public class GuestSessionServiceTests
             .Setup(r => r.GetByGuestSessionId(guestSession.Id))
             .ReturnsAsync(guestSession);
 
+        _mockGuestSessionRepository
+            .Setup(r => r.TryUpdateCartAsync(guestSession, groupReservation))
+            .ReturnsAsync(true);
+
         _mockGroupReservationRepository
             .Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
             .ReturnsAsync(groupReservation);
@@ -320,7 +333,7 @@ public class GuestSessionServiceTests
         await _guestSessionService.RemoveDishAsync(guestSession.Id, dishId, quantityToRemove);
 
         Assert.Empty(guestSession.Dishes);
-        _mockGuestSessionRepository.Verify(r => r.SaveAsync(guestSession), Times.Once);
+        _mockGuestSessionRepository.Verify(r => r.TryUpdateCartAsync(guestSession, groupReservation), Times.Once);
     }
 
     [Theory]
@@ -493,15 +506,17 @@ public class GuestSessionServiceTests
             .Setup(d => d.GetDishesByIdsAsync(It.IsAny<IEnumerable<string>>()))
             .ReturnsAsync(dishes);
 
-        GuestSession? session = null;
         _mockGuestSessionRepository
-            .Setup(r => r.SaveAsync(It.IsAny<GuestSession>()))
-            .Callback<GuestSession>(s => session = s);
+            .Setup(r => r.TrySubmitCartAsync(guestSession, groupReservation))
+            .ReturnsAsync(true);
 
         await _guestSessionService.SubmitCartAsync(guestSession.Id);
 
-        Assert.NotNull(session);
-        Assert.True(session.IsSubmitted);
+        _mockGuestSessionRepository.Verify(
+            repository => repository.TrySubmitCartAsync(
+                It.Is<GuestSession>(session => !session.IsSubmitted),
+                groupReservation),
+            Times.Once);
     }
 
     [Theory]
@@ -730,8 +745,6 @@ public class GuestSessionServiceTests
         };
     }
 }
-
-
 
 
 

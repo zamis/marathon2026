@@ -1,9 +1,12 @@
 using APIHandler.Handlers.GuestSessions;
+using APIHandler.Handlers.GroupReservations;
+using APIHandler.Handlers.Reservations;
 using APIHandler.Routing;
 using System;
 
 namespace APIHandler.Tests.Routing;
 
+[Collection("Resource environment")]
 public class GroupReservationSessionsRouteTests
 {
     [Fact]
@@ -60,6 +63,20 @@ public class GroupReservationSessionsRouteTests
             Assert.Equal("groupReservationId", groupReservationId.Key);
             Assert.Equal("group-1", groupReservationId.Value);
             Assert.Null(route.Match("/guest/groups/group-1/sessions/extra"));
+
+            var ownerSessionRoute = Assert.Single(RouteRegistry.GetAllRoutes().Where(candidate =>
+                candidate.Route.Method == "GET" &&
+                candidate.Route.Template == "/reservations/{reservationId}/guest-session-id"));
+            Assert.IsType<GetOwnerGuestSessionIdHandler>(ownerSessionRoute.Handler);
+            Assert.Equal("reservation-1",
+                Assert.Single(ownerSessionRoute.Match("/reservations/reservation-1/guest-session-id")!).Value);
+
+            var submitRoute = Assert.Single(RouteRegistry.GetAllRoutes().Where(candidate =>
+                candidate.Route.Method == "POST" &&
+                candidate.Route.Template == "/group-reservations/{groupReservationId}/submit"));
+            Assert.IsType<SubmitGroupReservationHandler>(submitRoute.Handler);
+            Assert.Equal("group-1",
+                Assert.Single(submitRoute.Match("/group-reservations/group-1/submit")!).Value);
         }
         finally
         {

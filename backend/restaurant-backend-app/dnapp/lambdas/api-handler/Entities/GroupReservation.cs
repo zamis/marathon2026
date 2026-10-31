@@ -1,4 +1,4 @@
-﻿using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DataModel;
 
 namespace APIHandler.Entities;
 
@@ -17,4 +17,7 @@ public class GroupReservation
 
     [DynamoDBProperty("status")]
     public GroupReservationStatus Status { get; set; }
+
+    [DynamoDBProperty("submissionVersion")]
+    public long SubmissionVersion { get; set; }
 }

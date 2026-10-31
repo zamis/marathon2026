@@ -50,6 +50,26 @@
     "resource_type": "iam_policy",
     "tags": {}
   },
+  "api-handler-dynamodb-transaction-policy": {
+    "policy_content": {
+      "Statement": [
+        {
+          "Action": [
+            "dynamodb:TransactWriteItems"
+          ],
+          "Effect": "Allow",
+          "Resource": [
+            "arn:aws:dynamodb:us-west-2:053121660568:table/GroupReservations",
+            "arn:aws:dynamodb:us-west-2:053121660568:table/GuestSessions",
+            "arn:aws:dynamodb:us-west-2:053121660568:table/Orders"
+          ]
+        }
+      ],
+      "Version": "2012-10-17"
+    },
+    "resource_type": "iam_policy",
+    "tags": {}
+  },
   "${api_gateway_name}": {
     "resource_type": "api_gateway",
     "deploy_stage": "develop",
@@ -998,6 +1018,23 @@
           "enable_proxy": true
         }
       },
+      "/group-reservations/{groupReservationId}/submit": {
+        "enable_cors": {
+          "state": true
+        },
+        "POST": {
+          "authorization_type": "cognito_authorizer",
+          "integration_type": "lambda",
+          "lambda_name": "api-handler",
+          "api_key_required": false,
+          "method_request_parameters": {},
+          "integration_request_body_template": {},
+          "responses": [],
+          "integration_responses": [],
+          "default_error_pattern": true,
+          "enable_proxy": true
+        }
+      },
       "/guest/sessions/{guestSessionId}/menu": {
         "enable_cors": {
           "state": true
@@ -1033,6 +1070,23 @@
         }
       },
       "/reservations/{reservationId}/invite-token": {
+        "enable_cors": {
+          "state": true
+        },
+        "GET": {
+          "authorization_type": "cognito_authorizer",
+          "integration_type": "lambda",
+          "lambda_name": "api-handler",
+          "api_key_required": false,
+          "method_request_parameters": {},
+          "integration_request_body_template": {},
+          "responses": [],
+          "integration_responses": [],
+          "default_error_pattern": true,
+          "enable_proxy": true
+        }
+      },
+      "/reservations/{reservationId}/guest-session-id": {
         "enable_cors": {
           "state": true
         },
@@ -1331,7 +1385,3 @@
     }
   }
 }
-
-
-
-

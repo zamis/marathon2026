@@ -4,6 +4,7 @@ using APIHandler.Exceptions;
 using APIHandler.Models.GroupReservation;
 using APIHandler.Repositories.GroupReservations;
 using APIHandler.Repositories.GuestSessions;
+using APIHandler.Repositories.Orders;
 using APIHandler.Repositories.Reservations;
 using APIHandler.Repositories.Tables;
 using APIHandler.Services.Auth;
@@ -20,6 +21,7 @@ public class GroupReservationServiceTests
     private readonly Mock<ITableRepository> _tableRepositoryMock = new();
     private readonly Mock<IReservationRepository> _reservationRepositoryMock = new();
     private readonly Mock<IGuestSessionRepository> _guestSessionRepositoryMock = new();
+    private readonly Mock<IOrderRepository> _orderRepositoryMock = new();
     private readonly Mock<IUserService> _userServiceMock = new();
     private readonly Mock<ILocationService> _locationServiceMock = new();
 
@@ -33,7 +35,8 @@ public class GroupReservationServiceTests
             _reservationRepositoryMock.Object,
             _guestSessionRepositoryMock.Object,
             _userServiceMock.Object,
-            _locationServiceMock.Object);
+            _locationServiceMock.Object,
+            _orderRepositoryMock.Object);
     }
 
     [Theory]
@@ -138,21 +141,26 @@ public class GroupReservationServiceTests
 
     [Theory]
     [AutoData]
-    public async Task CloseGroupReservationAsync_ValidInput_UpdatesGroupReservationStatus(GroupReservation groupReservation)
+    public async Task CloseGroupReservationAsync_ValidOpenGroup_UsesConditionalClose(GroupReservation groupReservation)
     {
+        groupReservation.Status = GroupReservationStatus.Open;
         _groupReservationRepositoryMock
             .Setup(r => r.GetByReservationIdAsync(groupReservation.ReservationId))
             .ReturnsAsync(groupReservation);
 
-        GroupReservation? savedGroupReservation = null;
         _groupReservationRepositoryMock
-            .Setup(r => r.SaveGroupReservationAsync(It.IsAny<GroupReservation>()))
-            .Callback<GroupReservation>(r => savedGroupReservation = r);
+            .Setup(r => r.TryCloseOpenGroupReservationAsync(groupReservation))
+            .ReturnsAsync(true);
 
         await _service.CloseGroupReservationAsync(groupReservation.ReservationId);
 
-        Assert.NotNull(savedGroupReservation);
-        Assert.Equal(GroupReservationStatus.Closed, savedGroupReservation.Status);
+        _groupReservationRepositoryMock.Verify(
+            r => r.TryCloseOpenGroupReservationAsync(
+                It.Is<GroupReservation>(group => group.Status == GroupReservationStatus.Open)),
+            Times.Once);
+        _groupReservationRepositoryMock.Verify(
+            r => r.SaveGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Never);
     }
 
     [Theory]
@@ -164,6 +172,76 @@ public class GroupReservationServiceTests
             .ReturnsAsync((GroupReservation?)null);
 
         await _service.CloseGroupReservationAsync(reservationId);
+    }
+
+    [Fact]
+    public async Task CloseGroupReservationAsync_RepeatedCloseKeepsGroupClosed()
+    {
+        var reservationId = "reservation-1";
+        var firstRead = CreateGroupReservation(reservationId, GroupReservationStatus.Open);
+        var secondRead = CreateGroupReservation(reservationId, GroupReservationStatus.Closed);
+        _groupReservationRepositoryMock
+            .SetupSequence(repository => repository.GetByReservationIdAsync(reservationId))
+            .ReturnsAsync(firstRead)
+            .ReturnsAsync(secondRead);
+
+        await _service.CloseGroupReservationAsync(reservationId);
+        await _service.CloseGroupReservationAsync(reservationId);
+
+        Assert.Equal(GroupReservationStatus.Open, firstRead.Status);
+        Assert.Equal(GroupReservationStatus.Closed, secondRead.Status);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.TryCloseOpenGroupReservationAsync(
+                It.Is<GroupReservation>(group => group.Status == GroupReservationStatus.Open)),
+            Times.Once);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.SaveGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CloseGroupReservationAsync_DoesNotOverwriteSubmittedGroup()
+    {
+        var group = CreateGroupReservation("reservation-1", GroupReservationStatus.Submitted);
+        _groupReservationRepositoryMock
+            .Setup(repository => repository.GetByReservationIdAsync(group.ReservationId))
+            .ReturnsAsync(group);
+
+        await _service.CloseGroupReservationAsync(group.ReservationId);
+
+        Assert.Equal(GroupReservationStatus.Submitted, group.Status);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.TryCloseOpenGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Never);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.SaveGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CloseGroupReservationAsync_StopsAfterConditionalConflictFindsSubmittedGroup()
+    {
+        var openGroup = CreateGroupReservation("reservation-1", GroupReservationStatus.Open);
+        var submittedGroup = CreateGroupReservation("reservation-1", GroupReservationStatus.Submitted);
+        _groupReservationRepositoryMock
+            .Setup(repository => repository.GetByReservationIdAsync(openGroup.ReservationId))
+            .ReturnsAsync(openGroup);
+        _groupReservationRepositoryMock
+            .Setup(repository => repository.TryCloseOpenGroupReservationAsync(openGroup))
+            .ReturnsAsync(false);
+        _groupReservationRepositoryMock
+            .Setup(repository => repository.GetGroupReservationByIdAsync(openGroup.GroupReservationId))
+            .ReturnsAsync(submittedGroup);
+
+        await _service.CloseGroupReservationAsync(openGroup.ReservationId);
+
+        Assert.Equal(GroupReservationStatus.Submitted, submittedGroup.Status);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.TryCloseOpenGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Once);
+        _groupReservationRepositoryMock.Verify(
+            repository => repository.SaveGroupReservationAsync(It.IsAny<GroupReservation>()),
+            Times.Never);
     }
 
     [Theory]
@@ -249,4 +327,12 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync(type, () => _service.GetGroupReservationInviteTokenAsync(reservation.Id));
     }
+
+    private static GroupReservation CreateGroupReservation(string reservationId, GroupReservationStatus status) => new()
+    {
+        GroupReservationId = $"group-{reservationId}",
+        ReservationId = reservationId,
+        ReservationToken = "token",
+        Status = status
+    };
 }

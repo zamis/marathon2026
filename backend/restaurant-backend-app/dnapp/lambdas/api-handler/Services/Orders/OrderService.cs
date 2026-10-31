@@ -98,7 +98,7 @@ public class OrderService : IOrderService
         }
 
         order.Status = OrderStatus.Created;
-        await _orderRepository.SaveOrderAsync(order);
+        await _orderRepository.CreateOrderAsync(order);
 
         if (!string.IsNullOrEmpty(reservation.WaiterId))
         {
@@ -120,7 +120,7 @@ public class OrderService : IOrderService
         }
 
         order.Status = OrderStatus.Created;
-        await _orderRepository.SaveOrderAsync(order);
+        await _orderRepository.CreateOrderAsync(order);
     }
 
     public async Task EditPreOrderAsync(

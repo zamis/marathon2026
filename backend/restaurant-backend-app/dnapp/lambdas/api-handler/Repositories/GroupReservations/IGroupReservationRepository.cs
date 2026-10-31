@@ -1,4 +1,4 @@
-﻿using APIHandler.Entities;
+using APIHandler.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -10,5 +10,6 @@ public interface IGroupReservationRepository
     Task<GroupReservation?> GetGroupReservationByIdAsync(string groupReservationId);
     Task DeleteGroupReservationAsync(GroupReservation groupReservation);
     Task SaveGroupReservationAsync(GroupReservation groupReservation);
+    Task<bool> TryCloseOpenGroupReservationAsync(GroupReservation groupReservation);
     Task<GroupReservation?> GetGroupReservationByTokenAsync(string token);
 }
