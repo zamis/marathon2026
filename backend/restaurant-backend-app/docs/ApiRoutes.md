@@ -1204,22 +1204,70 @@ Response: `200 OK` (consolidated submitted dishes):
 Errors: `400` invalid request, no submitted sessions/dishes, or order not found; `401` unauthenticated; `403` caller is not the reservation owner; `404` group reservation or reservation not found; `409` group reservation is closed or already submitted; `500` internal server error. Error body: `{"error":"..."}`.
 
 ### `GET` /guest/groups/{groupReservationId}/sessions
-Response: 200 OK
-```json
-[
-  {
-    "id": "string",
-    "groupReservationId": "string",
-    "guestName": "string",
-    "status": "string"
-  }
-]
-```
-
-### `DELETE` /guest/groups/{groupReservationId}/sessions/{guestSessionId}
-Response: 200 OK
+Owner-only. Response: 200 OK
 ```json
 {
-  "message": "Guest session removed from group successfully."
+  "participants": [
+    {
+      "id": "guest-session-id",
+      "type": "Guest",
+      "name": "Guest name",
+      "items": [
+        {
+          "dish": {
+            "id": "dish-id",
+            "name": "Dish name",
+            "price": 12.34
+          },
+          "quantity": 2
+        }
+      ],
+      "total": 24.68,
+      "isSubmitted": false
+    }
+  ],
+  "total": 24.68
+}
+```
+Errors: `401` unauthenticated; `403` caller is not the reservation owner; `404` group reservation or reservation not found.
+
+### `DELETE` /guest/groups/{groupReservationId}/sessions/{guestSessionId}
+Owner-only. Deletes a guest session and returns the updated group snapshot. Response: 200 OK
+```json
+{
+  "participants": [
+    {
+      "id": "remaining-guest-session-id",
+      "type": "Guest",
+      "name": "Guest name",
+      "items": [
+        {
+          "dish": {
+            "id": "dish-id",
+            "name": "Dish name",
+            "price": 12.34
+          },
+          "quantity": 2
+        }
+      ],
+      "total": 24.68,
+      "isSubmitted": false
+    }
+  ],
+  "total": 24.68
+}
+```
+The response excludes the deleted session; `total` is the sum of the remaining participants' totals. Deletion is allowed only while the group reservation is `Open`; a `Closed` or `Submitted` group returns `409 Conflict` without deleting the session. Errors: `400` missing path parameter, session belongs to a different group reservation, or target is the owner session; `401` unauthenticated; `403` caller is not the reservation owner; `404` group reservation, reservation, or guest session not found; `409` group reservation is not open. Missing path parameters return `{"error":"..."}`. Cross-group and owner-session validation errors return `{"message":"...","errorCode":"Unknown"}`, for example:
+```json
+{
+  "message": "Guest session does not belong to this group reservation.",
+  "errorCode": "Unknown"
+}
+```
+or
+```json
+{
+  "message": "The reservation owner's session cannot be deleted.",
+  "errorCode": "Unknown"
 }
 ```

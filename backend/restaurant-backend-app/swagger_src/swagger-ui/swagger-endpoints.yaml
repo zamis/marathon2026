@@ -321,15 +321,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetAllSessionsResponse'
+                $ref: '#/components/schemas/GroupReservationSessionsResponse'
         '400':
           description: Invalid request - missing groupReservationId
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not the reservation owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Group reservation not found or GroupId is required
+          description: Group reservation or reservation not found
           content:
             application/json:
               schema:
@@ -460,7 +472,7 @@ paths:
       tags:
         - Guest Sessions
       summary: Delete guest session
-      description: Deletes a guest session from a group reservation
+      description: Deletes a guest session from a group reservation and returns the updated participant snapshot. Only the reservation owner may delete guest sessions; the owner session cannot be deleted. Deletion is allowed only while the group reservation is Open.
       operationId: deleteGuestSession
       parameters:
         - name: groupReservationId
@@ -479,26 +491,54 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: Guest session deleted successfully
+          description: Guest session deleted successfully; returns the updated group snapshot
           content:
             application/json:
               schema:
-                type: object
-                description: Updated snapshot of the group reservation
+                $ref: '#/components/schemas/GroupReservationSessionsResponse'
         '400':
-          description: Invalid request - missing required path parameters
+          description: Missing path parameters return an error object; cross-group and owner-session validation failures return message and errorCode.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                anyOf:
+                  - $ref: '#/components/schemas/ErrorResponse'
+                  - $ref: '#/components/schemas/ErrorCodeResponse'
+              examples:
+                missingGroupReservationId:
+                  summary: Missing group reservation path parameter
+                  value:
+                    error: "Missing 'groupReservationId' in path parameters."
+                sessionFromAnotherGroup:
+                  summary: Guest session belongs to a different group reservation
+                  value:
+                    message: Guest session does not belong to this group reservation.
+                    errorCode: Unknown
+                ownerSession:
+                  summary: Owner session cannot be deleted
+                  value:
+                    message: The reservation owner's session cannot be deleted.
+                    errorCode: Unknown
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not the reservation owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Group reservation or guest session not found
+          description: Group reservation, reservation, or guest session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Group reservation is Closed or Submitted; the guest session was not deleted
           content:
             application/json:
               schema:
@@ -692,20 +732,20 @@ components:
           description: Name of the person who invited the guests
           example: Jane Doe
 
-    GetAllSessionsResponse:
+    GroupReservationSessionsResponse:
       type: object
       properties:
         participants:
           type: array
           items:
-            $ref: '#/components/schemas/Participant'
+            $ref: '#/components/schemas/GroupSessionParticipant'
         total:
           type: number
           format: decimal
           description: Total cost for all participants
           example: 125.50
 
-    Participant:
+    GroupSessionParticipant:
       type: object
       properties:
         id:
@@ -727,7 +767,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/OrderItemResponse'
+            $ref: '#/components/schemas/GroupSessionOrderItem'
           description: Items ordered by the participant
         total:
           type: number
@@ -739,31 +779,32 @@ components:
           description: Whether the participant has submitted their cart
           example: true
 
-    OrderItemResponse:
+    GroupSessionOrderItem:
       type: object
       properties:
-        dishId:
-          type: string
-          description: The ID of the dish
-          example: dish-123
-        dishName:
-          type: string
-          description: Name of the dish
-          example: Spaghetti Carbonara
+        dish:
+          $ref: '#/components/schemas/GroupSessionDish'
         quantity:
           type: integer
           description: Quantity ordered
           example: 2
+
+    GroupSessionDish:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the dish
+          example: dish-123
+        name:
+          type: string
+          description: Name of the dish
+          example: Spaghetti Carbonara
         price:
           type: number
           format: decimal
           description: Price per unit
           example: 22.50
-        total:
-          type: number
-          format: decimal
-          description: Total price for this item
-          example: 45.00
 
     GetGroupInviteTokenResponse:
       type: object
@@ -859,8 +900,31 @@ components:
 
     ErrorResponse:
       type: object
+      required:
+        - error
       properties:
         error:
           type: string
           description: Error message
           example: Missing guestSessionId in path parameters.
+
+    ErrorCodeResponse:
+      type: object
+      required:
+        - message
+        - errorCode
+      properties:
+        message:
+          type: string
+          description: Validation error message
+          example: Guest session does not belong to this group reservation.
+        errorCode:
+          type: string
+          description: Validation error code
+          enum:
+            - GroupReservationExpired
+            - GroupReservationSubmitted
+            - GuestLimitExceeded
+            - GuestSessionExpired
+            - Unknown
+          example: Unknown

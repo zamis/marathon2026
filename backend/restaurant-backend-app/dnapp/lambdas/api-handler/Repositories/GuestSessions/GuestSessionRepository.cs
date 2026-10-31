@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using APIHandler.Constants;
 using APIHandler.Entities;
+using APIHandler.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -228,36 +229,50 @@ public class GuestSessionRepository(
         IAmazonDynamoDB client = dynamoDbClient
             ?? throw new InvalidOperationException("A DynamoDB client is required for transactional session deletion.");
 
-        await client.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        try
         {
-            TransactItems =
-            [
-                new TransactWriteItem
-                {
-                    Delete = new Delete
+            await client.TransactWriteItemsAsync(new TransactWriteItemsRequest
+            {
+                TransactItems =
+                [
+                    new TransactWriteItem
                     {
-                        TableName = ResourceNames.GuestSessionTableName,
-                        Key = new Dictionary<string, AttributeValue>
+                        Delete = new Delete
                         {
-                            ["guestSessionId"] = new() { S = session.Id }
-                        },
-                        ConditionExpression = "#groupReservationId = :groupId",
-                        ExpressionAttributeNames = new Dictionary<string, string>
-                        {
-                            ["#groupReservationId"] = "groupReservationId"
-                        },
-                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                        {
-                            [":groupId"] = new() { S = session.GroupReservationId }
+                            TableName = ResourceNames.GuestSessionTableName,
+                            Key = new Dictionary<string, AttributeValue>
+                            {
+                                ["guestSessionId"] = new() { S = session.Id }
+                            },
+                            ConditionExpression = "#groupReservationId = :groupId",
+                            ExpressionAttributeNames = new Dictionary<string, string>
+                            {
+                                ["#groupReservationId"] = "groupReservationId"
+                            },
+                            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                            {
+                                [":groupId"] = new() { S = session.GroupReservationId }
+                            }
                         }
+                    },
+                    new TransactWriteItem
+                    {
+                        Update = CreateOpenGroupVersionUpdate(session.GroupReservationId)
                     }
-                },
-                new TransactWriteItem
-                {
-                    Update = CreateOpenGroupVersionUpdate(session.GroupReservationId)
-                }
-            ]
-        });
+                ]
+            });
+        }
+        catch (TransactionCanceledException exception) when (IsGroupStatusConditionFailure(exception))
+        {
+            GroupReservation? currentGroup = await context.LoadAsync<GroupReservation>(
+                session.GroupReservationId,
+                DynamoConfig.LoadConfig(ResourceNames.GroupReservationsTableName));
+
+            if (currentGroup?.Status is GroupReservationStatus.Closed or GroupReservationStatus.Submitted)
+                throw new GroupReservationNotOpenException();
+
+            throw;
+        }
     }
 
     private Update CreateOpenGroupVersionUpdate(string groupReservationId, long? expectedVersion = null)
@@ -321,4 +336,8 @@ public class GuestSessionRepository(
     private static bool IsRetryableConflict(TransactionCanceledException exception) =>
         exception.CancellationReasons?.Any(reason =>
             reason.Code is "ConditionalCheckFailed" or "TransactionConflict") == true;
+
+    private static bool IsGroupStatusConditionFailure(TransactionCanceledException exception) =>
+        exception.CancellationReasons is { Count: > 1 } reasons &&
+        reasons[1].Code == "ConditionalCheckFailed";
 }

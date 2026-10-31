@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using APIHandler.Constants;
 using APIHandler.Entities;
+using APIHandler.Exceptions;
 using APIHandler.Repositories.GuestSessions;
 using Moq;
 using System.Threading;
@@ -166,6 +167,73 @@ public class GuestSessionRepositoryTests
             Assert.Contains("#groupReservationId = :groupId", delete.ConditionExpression);
             Assert.Equal(session.GroupReservationId, delete.ExpressionAttributeValues[":groupId"].S);
         }
+    }
+
+    [Theory]
+    [InlineData(GroupReservationStatus.Closed)]
+    [InlineData(GroupReservationStatus.Submitted)]
+    public async Task DeleteAsync_WhenGroupStatusConditionFailsForClosedOrSubmittedGroup_ThrowsNotOpen(
+        GroupReservationStatus status)
+    {
+        var context = CreateContext();
+        LoadConfig? loadConfig = null;
+        context.Setup(db => db.LoadAsync<GroupReservation>(
+                It.IsAny<object>(), It.IsAny<LoadConfig>(), It.IsAny<CancellationToken>()))
+            .Callback<object, LoadConfig, CancellationToken>((_, config, _) => loadConfig = config)
+            .ReturnsAsync(new GroupReservation
+            {
+                GroupReservationId = "group-1",
+                ReservationId = "reservation-1",
+                ReservationToken = "token",
+                Status = status
+            });
+        var dynamoDb = new Mock<IAmazonDynamoDB>(MockBehavior.Strict);
+        dynamoDb.Setup(client => client.TransactWriteItemsAsync(
+                It.IsAny<TransactWriteItemsRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TransactionCanceledException("Group is no longer open")
+            {
+                CancellationReasons =
+                [
+                    new CancellationReason { Code = "None" },
+                    new CancellationReason { Code = "ConditionalCheckFailed" }
+                ]
+            });
+        var repository = new GuestSessionRepository(context.Object, dynamoDb.Object);
+
+        await Assert.ThrowsAsync<GroupReservationNotOpenException>(
+            () => repository.DeleteAsync(CreateSession()));
+
+        context.Verify(db => db.LoadAsync<GroupReservation>(
+            "group-1", It.IsAny<LoadConfig>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.NotNull(loadConfig);
+        Assert.True(loadConfig.ConsistentRead);
+        Assert.Equal(ResourceNames.GroupReservationsTableName, loadConfig.OverrideTableName);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenSessionConditionFails_DoesNotMisclassifyAsClosedGroup()
+    {
+        var context = CreateContext();
+        var dynamoDb = new Mock<IAmazonDynamoDB>(MockBehavior.Strict);
+        var cancellation = new TransactionCanceledException("Session condition failed")
+        {
+            CancellationReasons =
+            [
+                new CancellationReason { Code = "ConditionalCheckFailed" },
+                new CancellationReason { Code = "None" }
+            ]
+        };
+        dynamoDb.Setup(client => client.TransactWriteItemsAsync(
+                It.IsAny<TransactWriteItemsRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(cancellation);
+        var repository = new GuestSessionRepository(context.Object, dynamoDb.Object);
+
+        var thrown = await Assert.ThrowsAsync<TransactionCanceledException>(
+            () => repository.DeleteAsync(CreateSession()));
+
+        Assert.Same(cancellation, thrown);
+        context.Verify(db => db.LoadAsync<GroupReservation>(
+            It.IsAny<object>(), It.IsAny<LoadConfig>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static Mock<IDynamoDBContext> CreateContext()
