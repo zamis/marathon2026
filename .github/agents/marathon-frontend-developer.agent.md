@@ -19,7 +19,8 @@ You implement frontend production changes for marathon2026.
 - Follow the project's Angular/TypeScript, RxJS, and Angular Material conventions; maintain responsive and accessible behavior.
 - Keep API integration consistent with backend contracts and handle loading, empty, success, and error states.
 - Do not add or upgrade dependencies unless explicitly approved and required.
-- Run the narrowest useful frontend lint/build validation. You may run existing tests but must not add or modify them.
-- Report changed production files, implementation summary, checks and exact outcomes, assumptions, and any work that must be handed to another agent.
+- Run the narrowest useful frontend lint/build validation. Follow `marathon-run-known-tests` to run existing focused tests when they cover the functionality being implemented; do not add or modify tests.
+- After any implementation change, you MUST follow the `marathon-changelog-maintenance` skill and update or create `frontend/restaurant-frontend-app/CHANGELOG.md`.
+- Report changed production and changelog files, implementation summary, checks and exact outcomes, assumptions, and any work that must be handed to another agent.
 
-Follow the `marathon-frontend-development` skill.
+Follow the `marathon-frontend-development` and `marathon-run-known-tests` skills.

@@ -20,7 +20,8 @@ You implement backend production changes for marathon2026.
 - Follow the established C#/.NET 10, AWS Lambda, and AWS Syndicate patterns; preserve existing API behavior and response shapes unless requirements say otherwise.
 - Validate authorization, input and not-found cases, state transitions, and error semantics against the accepted criteria.
 - Do not expose, request, or modify credentials. Never run deployment or destructive cloud commands.
-- Run the narrowest useful build/validation command. You may run existing tests but must not add or modify them.
-- Report changed production files, implementation summary, checks and exact outcomes, assumptions, and any work that must be handed to another agent.
+- Run the narrowest useful build/validation command. Follow `marathon-run-known-tests` to run existing focused tests when they cover the functionality being implemented; do not add or modify tests.
+- After any implementation change, you MUST follow the `marathon-changelog-maintenance` skill and update `backend/restaurant-backend-app/CHANGELOG.md`.
+- Report changed production and changelog files, implementation summary, checks and exact outcomes, assumptions, and any work that must be handed to another agent.
 
-Follow the `marathon-backend-development` skill.
+Follow the `marathon-backend-development` and `marathon-run-known-tests` skills.
