@@ -1,0 +1,160 @@
+@use 'app/shared/styles/abstracts/colors' as color;
+
+.card {
+  padding: 1.25rem;
+  border-radius: 0.875rem;
+  background: color.$neutral-0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  color: color.$neutral-900;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.submitted {
+  color: color.$green-800;
+  background: color.$green-100;
+}
+
+.pending {
+  color: color.$orange-600;
+  background: color.$orange-30;
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid color.$neutral-100;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.initial {
+  display: grid;
+  place-items: center;
+  background: color.$green-100;
+  color: color.$neutral-600;
+  font-size: 0.875rem;
+}
+
+.dish-details {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.name {
+  overflow-wrap: anywhere;
+  color: color.$neutral-900;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.weight {
+  color: color.$neutral-600;
+  font-size: 0.75rem;
+}
+
+.qty,
+.price {
+  margin: 0;
+  color: color.$neutral-900;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.price {
+  min-width: 4.5rem;
+  text-align: right;
+  font-weight: 500;
+}
+
+.empty {
+  margin: 0;
+  padding: 0.75rem 0;
+  color: color.$neutral-600;
+  font-size: 0.875rem;
+}
+
+.subtotal {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color.$neutral-100;
+  color: color.$neutral-900;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: 1rem 0.75rem;
+  }
+
+  .item {
+    grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+    column-gap: 0.5rem;
+  }
+
+  .avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .price {
+    grid-column: 2 / -1;
+    justify-self: end;
+    min-width: 0;
+  }
+
+  .qty {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}

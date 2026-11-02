@@ -22,6 +22,10 @@ function render(participant: Participant): HTMLElement {
 }
 
 describe('Практичне · картка учасника', () => {
+  it('використовує семантичний елемент <article>', () => {
+    expect(render(OLENA).querySelectorAll('article').length).toBe(1);
+  });
+
   describe('крок 1 · заголовок картки', () => {
     it('гість: <h2> «Guest: Olena»', () => {
       expect(render(OLENA).querySelector('h2')?.textContent).toContain('Guest: Olena');

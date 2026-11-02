@@ -1,11 +1,12 @@
 <article class="card">
-  <h2 class="title">{{ title() }}</h2>
-
-  @if (participant().isSubmitted) {
-    <span class="chip submitted">Submitted</span>
-  } @else {
-    <span class="chip pending">Still choosing</span>
-  }
+  <header class="card-header">
+    <h2 class="title">{{ title() }}</h2>
+    @if (participant().isSubmitted) {
+      <span class="chip submitted">Submitted</span>
+    } @else {
+      <span class="chip pending">Still choosing</span>
+    }
+  </header>
 
   @if (participant().items.length) {
     <ul class="items">
@@ -16,9 +17,14 @@
           } @else {
             <span class="avatar initial" aria-hidden="true">{{ item.dish.name.charAt(0) }}</span>
           }
-          <p class="name">{{ item.dish.name }}</p>
-          <p class="qty">× {{ item.quantity }}</p>
-          <p class="price">{{ item.dish.price * item.quantity | currency }}</p>
+          <span class="dish-details">
+            <span class="name">{{ item.dish.name }}</span>
+            @if (item.dish.weight) {
+              <span class="weight">{{ item.dish.weight }}</span>
+            }
+          </span>
+          <span class="qty">× {{ item.quantity }}</span>
+          <span class="price">{{ item.dish.price * item.quantity | currency }}</span>
         </li>
       }
     </ul>
@@ -26,5 +32,5 @@
     <p class="empty">No dishes yet</p>
   }
 
-  <p class="subtotal"><span>Subtotal</span><span>{{ participant().total | currency }}</span></p>
+  <footer class="subtotal"><span>Subtotal</span><span>{{ participant().total | currency }}</span></footer>
 </article>

@@ -1,9 +1,65 @@
 <main class="page">
-  <h1>Group Pre-Order</h1>
+  <div class="review">
+    <header class="page-header">
+      <div class="title-row">
+        <h1>Group Pre-Order</h1>
+        <span class="order-badge">Created New Pre-Order</span>
+      </div>
 
-  <ul class="participants">
-    @for (person of participants(); track person.id) {
-      <li><app-participant-card [participant]="person" /></li>
-    }
-  </ul>
+      <ul class="order-details" aria-label="Group order details">
+        <li class="detail">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+          <span>{{ invite.LocationAddress }}</span>
+        </li>
+        <li class="detail">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M16 3v4M8 3v4M3 10h18" />
+          </svg>
+          <span>
+            <time [attr.datetime]="invite.StartTime">{{ invite.StartTime | date: 'MMM d, y' : 'UTC' }}</time>
+            @if (spansMultipleDays) {
+              –
+              <time [attr.datetime]="invite.EndTime">{{ invite.EndTime | date: 'MMM d, y' : 'UTC' }}</time>
+            }
+          </span>
+        </li>
+        <li class="detail">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <span>
+            <time [attr.datetime]="invite.StartTime">{{ invite.StartTime | date: 'HH:mm' : 'UTC' }}</time>
+            –
+            <time [attr.datetime]="invite.EndTime">{{ invite.EndTime | date: 'HH:mm' : 'UTC' }}</time>
+          </span>
+        </li>
+        <li class="detail guests">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6" />
+          </svg>
+          <span>{{ guestCount() }} of {{ invite.MaxGuestCount }} guests</span>
+        </li>
+      </ul>
+    </header>
+
+    <section class="participants-section" aria-label="Participant pre-orders">
+      <ul class="participants">
+        @for (person of participants(); track person.id) {
+          <li>
+            <app-participant-card [participant]="person" [isMe]="person.type === 'Owner'" />
+          </li>
+        }
+      </ul>
+    </section>
+
+    <footer class="grand-total">
+      <span>Grand Total</span>
+      <span class="total-amount">{{ grandTotal | currency }}</span>
+    </footer>
+  </div>
 </main>
