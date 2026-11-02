@@ -2,12 +2,13 @@
   <div class="review">
     @if (loading()) {
       <p class="state-message" role="status">Loading group pre-order…</p>
-    } @else if (loadError(); as errorMessage) {
+    } @else if (loadError()) {
       <section class="error-state" role="alert">
-        <p>{{ errorMessage }}</p>
+        <p>{{ loadError() }}</p>
         <button type="button" class="secondary-button" (click)="retry()">Try again</button>
       </section>
-    } @else if (invite(); as currentInvite) {
+    } @else if (invite()) {
+      @let currentInvite = invite()!;
       <header class="page-header">
         <div class="title-row">
           <h1>Group Pre-Order</h1>
@@ -78,6 +79,22 @@
           {{ pendingParticipantCount() }}
           {{ pendingParticipantCount() === 1 ? "participant hasn't" : "participants haven't" }}
           submitted their cart yet — their dishes won't be included in the order
+        </p>
+      }
+
+      @if (groupStatus()?.status === 'Open') {
+        @if (updatedAt()) {
+          <section class="sync-controls" aria-label="Group pre-order synchronization">
+            <p class="updated-at" role="status">
+              Updated at {{ updatedAt() | date: 'HH:mm:ss' }}
+            </p>
+            <button type="button" class="secondary-button" (click)="refreshNow()">Refresh</button>
+          </section>
+        }
+      }
+      @if (refreshFailed() && updatedAt()) {
+        <p class="refresh-error" role="status">
+          Couldn't refresh. Showing data from {{ updatedAt() | date: 'HH:mm:ss' }}.
         </p>
       }
 

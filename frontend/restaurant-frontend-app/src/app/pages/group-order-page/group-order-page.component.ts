@@ -11,15 +11,31 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin, of, Subscription, switchMap } from 'rxjs';
+import {
+  catchError,
+  EMPTY,
+  exhaustMap,
+  forkJoin,
+  interval,
+  merge,
+  of,
+  Observable,
+  Subject,
+  Subscription,
+  switchMap,
+} from 'rxjs';
 import { ParticipantCardComponent } from '@app/components/group-orders/participant-card/participant-card.component';
 import { GroupStatusResponse } from '@app/models/group-orders/group-status.model';
+import { GroupSessionsResponse } from '@app/models/group-orders/group-sessions-response.model';
 import { Participant } from '@app/models/group-orders/participant.model';
 import { GroupOrdersService } from '@app/services/group-orders/group-orders.service';
 import { ToastService } from '@app/services/toast/toast.service';
 import { ModalComponent } from '@app/shared/custom-components/modal/modal.component';
 import { GuestInvite } from '@app/models/reservations/guest-invite.model';
 import { ConsolidatedOrder, consolidatePreOrder } from '@app/shared/helpers/consolidate-pre-order';
+import { getServerErrorMessage } from '@app/shared/helpers/http-error-helpers';
+
+const GROUP_ORDER_REFRESH_INTERVAL_MS = 15_000;
 
 @Component({
   selector: 'app-group-order-page',
@@ -34,6 +50,8 @@ export class GroupOrderPageComponent implements OnInit {
   private readonly groupOrdersService = inject(GroupOrdersService);
   private readonly toastService = inject(ToastService);
   private loadSubscription: Subscription | null = null;
+  private pollSubscription: Subscription | null = null;
+  private readonly manualRefreshRequests = new Subject<void>();
 
   readonly reservationId = signal('');
   readonly loading = signal(false);
@@ -44,6 +62,8 @@ export class GroupOrderPageComponent implements OnInit {
   readonly groupStatus = signal<GroupStatusResponse | null>(null);
   readonly isSubmitting = signal(false);
   readonly submitDialogOpen = signal(false);
+  readonly updatedAt = signal<Date | null>(null);
+  readonly refreshFailed = signal(false);
 
   readonly consolidatedOrder = computed<ConsolidatedOrder>(() =>
     consolidatePreOrder(this.participants())
@@ -87,10 +107,17 @@ export class GroupOrderPageComponent implements OnInit {
       this.reservationId.set(params.get('reservationId') ?? '');
       this.load();
     });
+    this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
   retry(): void {
     this.load();
+  }
+
+  refreshNow(): void {
+    if (this.groupStatus()?.status === 'Open') {
+      this.manualRefreshRequests.next();
+    }
   }
 
   openSubmitDialog(): void {
@@ -118,6 +145,7 @@ export class GroupOrderPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.stopPolling();
           this.groupStatus.update((status) =>
             status ? { ...status, status: 'Submitted' } : status
           );
@@ -125,19 +153,28 @@ export class GroupOrderPageComponent implements OnInit {
           this.toastService.success('Pre-order sent to the restaurant');
           this.isSubmitting.set(false);
         },
-        // tokenInterceptor already presents API failures as a toast.
-        error: () => this.isSubmitting.set(false),
+        error: (error: unknown) => {
+          const message =
+            error instanceof HttpErrorResponse
+              ? getServerErrorMessage(error)
+              : '';
+          this.toastService.error(message || 'Unable to submit the pre-order. Please try again.');
+          this.isSubmitting.set(false);
+        },
       });
   }
 
   private load(): void {
     this.loadSubscription?.unsubscribe();
+    this.stopPolling();
     this.loadError.set(null);
     this.loading.set(true);
     this.invite.set(null);
     this.participants.set([]);
     this.guestSessionId.set(null);
     this.groupStatus.set(null);
+    this.updatedAt.set(null);
+    this.refreshFailed.set(false);
 
     const currentReservationId = this.reservationId();
     if (!currentReservationId) {
@@ -166,6 +203,10 @@ export class GroupOrderPageComponent implements OnInit {
           this.guestSessionId.set(ownerSession);
           this.groupStatus.set(status);
           this.loading.set(false);
+          this.updatedAt.set(new Date());
+          if (status.status === 'Open') {
+            this.startPolling();
+          }
         },
         error: (error: unknown) => {
           this.loadError.set(
@@ -176,5 +217,66 @@ export class GroupOrderPageComponent implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  private startPolling(): void {
+    this.stopPolling();
+    this.pollSubscription = merge(
+      interval(GROUP_ORDER_REFRESH_INTERVAL_MS),
+      this.manualRefreshRequests
+    )
+      .pipe(
+        exhaustMap(() =>
+          this.refreshData().pipe(
+            catchError(() => {
+              this.refreshFailed.set(true);
+              return EMPTY;
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ sessions, status }) => {
+        if (sessions) {
+          this.participants.set(sessions.participants);
+        }
+        if (status) {
+          this.groupStatus.set(status);
+        }
+
+        const refreshSucceeded = sessions !== null && status !== null;
+        if (refreshSucceeded) {
+          this.updatedAt.set(new Date());
+        }
+        this.refreshFailed.set(!refreshSucceeded);
+
+        if (status && status.status !== 'Open') {
+          this.stopPolling();
+        }
+      });
+  }
+
+  private refreshData(): Observable<{
+    sessions: GroupSessionsResponse | null;
+    status: GroupStatusResponse | null;
+  }> {
+    const groupReservationId = this.invite()?.GroupReservationId;
+    if (!groupReservationId) {
+      return EMPTY;
+    }
+
+    return forkJoin({
+      sessions: this.groupOrdersService
+        .getSessions$(groupReservationId, { silent: true })
+        .pipe(catchError(() => of(null))),
+      status: this.groupOrdersService
+        .getStatus$(groupReservationId, { silent: true })
+        .pipe(catchError(() => of(null))),
+    });
+  }
+
+  private stopPolling(): void {
+    this.pollSubscription?.unsubscribe();
+    this.pollSubscription = null;
   }
 }

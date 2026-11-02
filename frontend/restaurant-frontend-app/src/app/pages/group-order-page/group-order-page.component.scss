@@ -89,6 +89,29 @@ h1 {
   padding-top: 1.25rem;
 }
 
+.sync-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 1rem;
+}
+
+.updated-at {
+  margin: 0;
+  color: color.$neutral-700;
+  font-size: 0.875rem;
+}
+
+.refresh-error {
+  margin: 0.5rem 0 0;
+  color: color.$red-400;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
 .participants {
   display: flex;
   flex-direction: column;

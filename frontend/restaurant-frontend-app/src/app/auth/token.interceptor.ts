@@ -34,32 +34,33 @@ export const tokenInterceptor: HttpInterceptorFn = (
           errorMessage = error.error.message;
         }
 
-        // For guest endpoints, you may still show toast if you want:
-        switch (error.status) {
-          case 400:
-            toastr.error(errorMessage || 'Bad request.', 'Error');
-            break;
-          case 401:
-            toastr.error('Session expired. Please re-open the invite link.', 'Unauthorized');
-            break;
-          case 403:
-            toastr.error(errorMessage || 'You are not allowed!', 'Forbidden');
-            break;
-          case 404:
-            toastr.error(errorMessage || 'Resource not found.', 'Not Found');
-            break;
-          case 409:
-            toastr.error(errorMessage || 'Conflict occurred.', 'Conflict');
-            break;
-          case 422:
-            toastr.error(errorMessage || 'Validation error.', 'Error');
-            break;
-          case 500:
-            toastr.error('Server error. Please try again later.', 'Server Error');
-            break;
-          default:
-            toastr.error(errorMessage, 'Error');
-            break;
+        if (!req.context.get(SKIP_ERROR_TOAST)) {
+          switch (error.status) {
+            case 400:
+              toastr.error(errorMessage || 'Bad request.', 'Error');
+              break;
+            case 401:
+              toastr.error('Session expired. Please re-open the invite link.', 'Unauthorized');
+              break;
+            case 403:
+              toastr.error(errorMessage || 'You are not allowed!', 'Forbidden');
+              break;
+            case 404:
+              toastr.error(errorMessage || 'Resource not found.', 'Not Found');
+              break;
+            case 409:
+              toastr.error(errorMessage || 'Conflict occurred.', 'Conflict');
+              break;
+            case 422:
+              toastr.error(errorMessage || 'Validation error.', 'Error');
+              break;
+            case 500:
+              toastr.error('Server error. Please try again later.', 'Server Error');
+              break;
+            default:
+              toastr.error(errorMessage, 'Error');
+              break;
+          }
         }
 
         return throwError(() => error);
