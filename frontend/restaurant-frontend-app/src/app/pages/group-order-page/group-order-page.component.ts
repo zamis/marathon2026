@@ -17,6 +17,7 @@ import {
   exhaustMap,
   forkJoin,
   interval,
+  map,
   merge,
   of,
   Observable,
@@ -49,6 +50,7 @@ export class GroupOrderPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly groupOrdersService = inject(GroupOrdersService);
   private readonly toastService = inject(ToastService);
+  private sessionsRevision = 0;
   private loadSubscription: Subscription | null = null;
   private pollSubscription: Subscription | null = null;
   private readonly manualRefreshRequests = new Subject<void>();
@@ -62,6 +64,8 @@ export class GroupOrderPageComponent implements OnInit {
   readonly groupStatus = signal<GroupStatusResponse | null>(null);
   readonly isSubmitting = signal(false);
   readonly submitDialogOpen = signal(false);
+  readonly guestToRemove = signal<Participant | null>(null);
+  readonly isRemovingGuest = signal(false);
   readonly updatedAt = signal<Date | null>(null);
   readonly refreshFailed = signal(false);
 
@@ -97,6 +101,9 @@ export class GroupOrderPageComponent implements OnInit {
       this.participants().every((participant) => participant.items.length === 0)
   );
   readonly isReadOnly = computed(() => this.groupStatus()?.status !== 'Open');
+  readonly canRemoveGuests = computed(
+    () => this.groupStatus()?.status === 'Open' && !this.isRemovingGuest()
+  );
   readonly canSubmit = computed(
     () => !this.isReadOnly() && !this.isSubmitting() && this.consolidatedOrder().items.length > 0
   );
@@ -132,6 +139,47 @@ export class GroupOrderPageComponent implements OnInit {
     }
   }
 
+  openRemoveGuestDialog(participant: Participant): void {
+    if (participant.type === 'Guest' && this.canRemoveGuests()) {
+      this.guestToRemove.set(participant);
+    }
+  }
+
+  closeRemoveGuestDialog(): void {
+    if (!this.isRemovingGuest()) {
+      this.guestToRemove.set(null);
+    }
+  }
+
+  confirmRemoveGuest(): void {
+    const guest = this.guestToRemove();
+    const groupReservationId = this.invite()?.GroupReservationId;
+    if (!guest || guest.type !== 'Guest' || !groupReservationId || !this.canRemoveGuests()) {
+      return;
+    }
+
+    this.isRemovingGuest.set(true);
+    this.groupOrdersService
+      .removeSession$(groupReservationId, guest.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (sessions) => {
+          this.sessionsRevision += 1;
+          this.participants.set(sessions.participants);
+          this.updatedAt.set(new Date());
+          this.refreshFailed.set(false);
+          this.guestToRemove.set(null);
+          this.isRemovingGuest.set(false);
+          this.toastService.success('Guest removed from the reservation');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof HttpErrorResponse ? getServerErrorMessage(error) : '';
+          this.toastService.error(message || 'Unable to remove the guest. Please try again.');
+          this.isRemovingGuest.set(false);
+        },
+      });
+  }
+
   confirmSubmit(): void {
     const groupReservationId = this.invite()?.GroupReservationId;
     const currentReservationId = this.reservationId();
@@ -154,10 +202,7 @@ export class GroupOrderPageComponent implements OnInit {
           this.isSubmitting.set(false);
         },
         error: (error: unknown) => {
-          const message =
-            error instanceof HttpErrorResponse
-              ? getServerErrorMessage(error)
-              : '';
+          const message = error instanceof HttpErrorResponse ? getServerErrorMessage(error) : '';
           this.toastService.error(message || 'Unable to submit the pre-order. Please try again.');
           this.isSubmitting.set(false);
         },
@@ -226,18 +271,20 @@ export class GroupOrderPageComponent implements OnInit {
       this.manualRefreshRequests
     )
       .pipe(
-        exhaustMap(() =>
-          this.refreshData().pipe(
+        exhaustMap(() => {
+          const sessionsRevision = this.sessionsRevision;
+          return this.refreshData().pipe(
+            map((result) => ({ ...result, sessionsRevision })),
             catchError(() => {
               this.refreshFailed.set(true);
               return EMPTY;
             })
-          )
-        ),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ sessions, status }) => {
-        if (sessions) {
+      .subscribe(({ sessions, status, sessionsRevision }) => {
+        if (sessions && sessionsRevision === this.sessionsRevision) {
           this.participants.set(sessions.participants);
         }
         if (status) {

@@ -85,9 +85,7 @@
       @if (groupStatus()?.status === 'Open') {
         @if (updatedAt()) {
           <section class="sync-controls" aria-label="Group pre-order synchronization">
-            <p class="updated-at" role="status">
-              Updated at {{ updatedAt() | date: 'HH:mm:ss' }}
-            </p>
+            <p class="updated-at" role="status">Updated at {{ updatedAt() | date: 'HH:mm:ss' }}</p>
             <button type="button" class="secondary-button" (click)="refreshNow()">Refresh</button>
           </section>
         }
@@ -108,6 +106,8 @@
               <app-participant-card
                 [participant]="person"
                 [isMe]="person.id === guestSessionId()"
+                [canRemove]="canRemoveGuests()"
+                (removeClick)="openRemoveGuestDialog($event)"
               />
             </li>
           }
@@ -172,6 +172,33 @@
         (click)="confirmSubmit()"
       >
         Submit
+      </button>
+    </div>
+  </app-modal>
+}
+
+@if (guestToRemove(); as guest) {
+  <app-modal title="Remove Guest" (closed)="closeRemoveGuestDialog()">
+    <p>
+      Are you sure you want to remove <strong>{{ guest.name }}</strong> and their pre-order from
+      this reservation? This action cannot be undone.
+    </p>
+    <div modal-actions class="modal-actions">
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="isRemovingGuest()"
+        (click)="closeRemoveGuestDialog()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="danger-button"
+        [disabled]="isRemovingGuest()"
+        (click)="confirmRemoveGuest()"
+      >
+        {{ isRemovingGuest() ? 'Removing…' : 'Remove Guest' }}
       </button>
     </div>
   </app-modal>

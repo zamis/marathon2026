@@ -47,6 +47,20 @@ export class GroupOrdersService {
     );
   }
 
+  removeSession$(
+    groupReservationId: string,
+    guestSessionId: string
+  ): Observable<GroupSessionsResponse> {
+    return this.http.delete<GroupSessionsResponse>(
+      `${this.baseUrl}/guest/groups/${encodeURIComponent(groupReservationId)}/sessions/${encodeURIComponent(guestSessionId)}`,
+      {
+        context: new HttpContext()
+          .set(USE_OWNER_AUTH_FOR_GUEST_ENDPOINT, true)
+          .set(SKIP_ERROR_TOAST, true),
+      }
+    );
+  }
+
   getOwnerSessionId$(reservationId: string): Observable<string> {
     return this.http
       .get<OwnerSessionResponse>(

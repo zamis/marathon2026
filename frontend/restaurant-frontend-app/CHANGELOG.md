@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added owner removal of guest sessions and their pre-orders from open group reservations, applying the server's updated session snapshot after confirmation.
 - Added the owner group pre-order review, consolidated submitted-cart totals, and confirmation flow.
 - Added the group orders API service for session, status, owner-session, invite, and submission requests.
 - Added silent 15-second/manual synchronization for Open owner group pre-orders, last-successful refresh feedback, and API-text submit error toasts.
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated the group order page to load live reservation data and handle loading, error, empty, submitted, and closed states.
 
 ### Fixed
+- Prevented an in-flight pre-removal poll from restoring a removed guest over the successful DELETE snapshot.
 - Applied successful background status refreshes even when sessions refresh fails, retaining the last successful sessions data and stopping polling for non-Open groups.
 - Kept the background-refresh failure warning visible with the last-good timestamp after a successful non-Open status update.
 - Supported static ActivatedRoute snapshot parameters when no paramMap observable is provided.

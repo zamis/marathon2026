@@ -23,6 +23,27 @@
   line-height: 1.4;
 }
 
+.remove-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color.$red-400;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  &:focus-visible {
+    border-radius: 0.125rem;
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
