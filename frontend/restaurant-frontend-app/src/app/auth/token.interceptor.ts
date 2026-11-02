@@ -9,6 +9,7 @@ import { ToastService } from '../services/toast/toast.service';
 import { inject } from '@angular/core';
 import { AuthenticationService } from './services/authentication.service';
 import { SKIP_ERROR_TOAST } from './skip-error-toast.context';
+import { USE_OWNER_AUTH_FOR_GUEST_ENDPOINT } from './use-owner-auth.context';
 import { getServerErrorMessage } from '../shared/helpers/http-error-helpers';
 
 export const tokenInterceptor: HttpInterceptorFn = (
@@ -17,10 +18,9 @@ export const tokenInterceptor: HttpInterceptorFn = (
 ) => {
   const toastr = inject(ToastService);
 
-  // IMPORTANT: do not modify Guest endpoints at all.
-  // Guest flow uses a different token (guest session token) and we must not touch the body.
-  // Otherwise we break POST /guest/sessions payload.
-  if (req.url.includes('/guest/')) {
+  // Guest-session requests keep their existing token and payload behavior. Owner-authorized
+  // guest routes must explicitly opt in through USE_OWNER_AUTH_FOR_GUEST_ENDPOINT.
+  if (req.url.includes('/guest/') && !req.context.get(USE_OWNER_AUTH_FOR_GUEST_ENDPOINT)) {
     return next(req).pipe(
       catchError((error: HttpErrorResponse) => {
         console.log(error);
@@ -73,10 +73,10 @@ export const tokenInterceptor: HttpInterceptorFn = (
   const clonedRequest =
     tokens && tokens.idToken
       ? req.clone({
-        setHeaders: {
-          Authorization: 'Bearer ' + tokens.idToken,
-        },
-      })
+          setHeaders: {
+            Authorization: 'Bearer ' + tokens.idToken,
+          },
+        })
       : req;
 
   return next(clonedRequest).pipe(
