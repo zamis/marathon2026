@@ -55,7 +55,7 @@
     [table]="selectedTable()!"
     [guests]="selectedReservation()!.guestCount"
     [selectedTimeRange]="selectedTimeRange()!"
-    [locationName]="selectedReservation()!.locationAddress"
+    [locationName]="selectedReservation()!.locationAddress ?? 'Location unavailable'"
     (makeReservation)="
       onSubmitEditReservation(
         $event.timeRange,

@@ -9,7 +9,7 @@
           aria-hidden="true"
         />
 
-        {{ r().locationAddress }}
+        {{ r().locationAddress ?? 'Location unavailable' }}
       </div>
 
       @if (role() === Roles.WAITER) {

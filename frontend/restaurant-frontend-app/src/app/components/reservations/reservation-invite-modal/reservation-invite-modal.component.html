@@ -2,7 +2,7 @@
   <dl class="info">
     <div class="info-row">
       <dt>Location</dt>
-      <dd>{{ reservation().locationAddress }}</dd>
+      <dd>{{ reservation().locationAddress ?? 'Location unavailable' }}</dd>
     </div>
     <div class="info-row">
       <dt>Date</dt>

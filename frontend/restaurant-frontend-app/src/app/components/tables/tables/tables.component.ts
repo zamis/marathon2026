@@ -85,7 +85,8 @@ export class TablesComponent implements OnInit {
       .subscribe((locations) => {
         this.locationOptions = [
           ALL_LOCATIONS_LABEL,
-          ...locations.map((location) => location.address),
+          ...locations.map((location) => location.address)
+            .filter((address): address is string => !!address && !!address.trim()),
         ];
         this.locations = locations;
 
@@ -340,11 +341,12 @@ export class TablesComponent implements OnInit {
 
   loadAvailableTables(): void {
     if (this.lastAppliedFilter) {
+      const location = this.locations
+        .filter((loc) => typeof loc.address === 'string' && loc.address.trim())
+        .find((loc) => loc.address === this.lastAppliedFilter!.location) || null;
       const filter = {
         ...this.lastAppliedFilter,
-        location:
-          this.locations.find((loc) => loc.address === this.lastAppliedFilter!.location)?.id ||
-          null,
+        location: location?.id || null,
       };
 
       this.searchSubscription?.unsubscribe();

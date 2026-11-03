@@ -1,9 +1,9 @@
 export interface LocationResponse {
   id: string;
-  address: string;
+  address: string | null;
   description: string;
   totalCapacity: number;
   averageOccupancy: string;
-  imageUrl: string;
+  imageUrl: string | null;
   rating: number;
 }

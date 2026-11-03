@@ -232,10 +232,10 @@ export class ReservationDashboardComponent implements OnInit {
         map((locations) =>
           locations.find(
             (location) =>
+              typeof reservation.locationAddress === 'string' &&
+              typeof location.address === 'string' &&
               location.address.trim().toLowerCase() ===
-              reservation.locationAddress
-                .trim()
-                .toLowerCase(),
+                reservation.locationAddress.trim().toLowerCase(),
           ),
         ),
         switchMap((location) => {

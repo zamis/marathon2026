@@ -101,7 +101,7 @@
       <tbody>
         @for (row of reportData; track row.waiterEmail) {
           <tr>
-            <td>{{ row.locationName }}</td>
+            <td>{{ row.locationName ?? 'Location unavailable' }}</td>
             <td>{{ row.waiterName }}</td>
             <td>{{ row.waiterEmail }}</td>
             <td>{{ row.startDate | date: 'MMM d, y' }}</td>
@@ -135,7 +135,7 @@
       <tbody>
         @for (row of reportData; track row.locationId) {
           <tr>
-            <td>{{ row.locationName }}</td>
+            <td>{{ row.locationName ?? 'Location unavailable' }}</td>
             <td>{{ row.startDate | date: 'MMM d, y' }}</td>
             <td>{{ row.endDate | date: 'MMM d, y' }}</td>
             <td>{{ row.totalOrders }}</td>

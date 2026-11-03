@@ -3,7 +3,7 @@
     <div class="order">
       <span class="body-bold">
         Pre-order #{{ order().orderId }}
-        ({{ order().reservationAddress }}, {{ order().reservationTime }})
+        ({{ order().reservationAddress ?? 'Location unavailable' }}, {{ order().reservationTime }})
       </span>
 
       <div class="order-item">

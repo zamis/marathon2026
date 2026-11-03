@@ -6,7 +6,7 @@
 >
   <img
     [src]="location().imageUrl"
-    [alt]="'Restaurant at ' + location().address"
+    [alt]="'Restaurant at ' + (location().address ?? '')"
     class="location-image"
   />
 
@@ -19,7 +19,7 @@
         class="location-icon"
       />
       <span class="location-text">
-        {{ location().address }}
+        {{ location().address ?? 'Location unavailable' }}
       </span>
     </div>
 

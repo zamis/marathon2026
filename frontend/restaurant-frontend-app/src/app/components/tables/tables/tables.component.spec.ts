@@ -1,9 +1,10 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, Params, provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 import { Reservation, ReservationStatus } from '@app/models/reservations/reservation.model';
+import { LocationsService } from '@app/services/locations/locations.service';
 import { ReservationService } from '@app/services/reservation/reservation.service';
 import { TableService } from '@app/services/table/table.service';
 import { ToastService } from '@app/services/toast/toast.service';
@@ -30,21 +31,30 @@ describe('ReservationsPageComponent', () => {
   let fixture: ComponentFixture<TablesComponent>;
   let reservationService: jasmine.SpyObj<ReservationService>;
   let toastService: jasmine.SpyObj<ToastService>;
+  let locationsService: jasmine.SpyObj<LocationsService>;
+  let locationsResponse$: Subject<LocationResponse[]>;
+  let queryParams$: Subject<Params>;
 
   beforeEach(async () => {
     reservationService = jasmine.createSpyObj<ReservationService>('ReservationService', [
       'makeReservation$',
     ]);
     toastService = jasmine.createSpyObj<ToastService>('ToastService', ['error', 'success']);
+    locationsService = jasmine.createSpyObj<LocationsService>('LocationsService', ['getLocations']);
+    locationsResponse$ = new Subject<LocationResponse[]>();
+    locationsService.getLocations.and.returnValue(locationsResponse$);
+    queryParams$ = new Subject<Params>();
 
     await TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        { provide: ActivatedRoute, useValue: { queryParams: queryParams$ } },
         { provide: API_BASE_URL, useValue: 'https://test.api' },
         { provide: ReservationService, useValue: reservationService },
         { provide: ToastService, useValue: toastService },
+        { provide: LocationsService, useValue: locationsService },
       ],
       imports: [TablesComponent],
     }).compileComponents();
@@ -64,6 +74,77 @@ describe('ReservationsPageComponent', () => {
 
   it('initializes time options for the first available date', () => {
     expect(component.timeOptions.length).toBeGreaterThan(0);
+  });
+
+  it('renders valid location options when the API includes a null address', () => {
+    locationsResponse$.next([
+      {
+        id: 'loc-null',
+        address: null,
+        description: '',
+        totalCapacity: 0,
+        averageOccupancy: '',
+        imageUrl: '',
+        rating: 0,
+      },
+      {
+        id: 'loc-valid',
+        address: '48 Rustaveli Avenue',
+        description: '',
+        totalCapacity: 0,
+        averageOccupancy: '',
+        imageUrl: '',
+        rating: 0,
+      },
+    ]);
+    fixture.detectChanges();
+
+    const locationSelect: HTMLElement = fixture.nativeElement.querySelector(
+      '.field app-custom-select .custom-select'
+    );
+    locationSelect.click();
+    fixture.detectChanges();
+
+    const element: HTMLElement = fixture.nativeElement;
+    const options = Array.from(element.querySelectorAll('[role="option"]')).map((option) =>
+      option.textContent?.trim()
+    );
+    expect(options).toEqual(['All Locations', '48 Rustaveli Avenue']);
+  });
+
+  describe('location deep links', () => {
+    const filterForSearch = (): void => {
+      component.onDateSelected(component.dateOptions[0]);
+      component.onTimeSelected(component.timeOptions[0]);
+    };
+
+    it('does not search all locations when the linked location has a null address', () => {
+      const tableService = TestBed.inject(TableService);
+      const searchSpy = spyOn(tableService, 'getAvailableTablesWithTimeSlots$').and.returnValue(
+        of([])
+      );
+      queryParams$.next({ locationId: 'loc-null' });
+      locationsResponse$.next([
+        {
+          id: 'loc-null',
+          address: null,
+          description: '',
+          totalCapacity: 0,
+          averageOccupancy: '',
+          imageUrl: '',
+          rating: 0,
+        },
+      ]);
+      filterForSearch();
+
+      component.onFilter();
+      fixture.detectChanges();
+
+      expect(searchSpy).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.empty-state h3')?.textContent).toContain(
+        'Location Unavailable'
+      );
+    });
   });
 
   it('refreshes time options and stores the date when a date is selected', () => {
@@ -378,6 +459,27 @@ describe('ReservationsPageComponent', () => {
       component.lastAppliedFilter = null;
 
       expect(component.selectedLocationName).toBe('Location unavailable');
+    });
+
+    it('renders Edit Reservation safely when the selected location address is null', () => {
+      component.locations = [{ id: 'loc-1', address: null } as LocationResponse];
+      component.lastAppliedFilter = {
+        location: null,
+        date: 'Oct 17, 2026',
+        time: '12:00',
+        guests: 2,
+      };
+      component.onTimeSlotsClick(table, {
+        start: '2026-10-17T12:00:00Z',
+        end: '2026-10-17T14:00:00Z',
+      });
+      component.onEditReview();
+
+      expect(() => fixture.detectChanges()).not.toThrow();
+      expect(fixture.nativeElement.querySelector('app-edit-reservation-modal')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.subtitle')?.textContent).toContain(
+        'Location unavailable'
+      );
     });
   });
 

@@ -2,7 +2,7 @@ import { OrderItem } from '../dishes/order-item.model';
 
 export interface Order {
   orderId: string;
-  reservationAddress: string;
+  reservationAddress: string | null;
   reservationTime: string;
   reservationId: string;
   orderItems: OrderItem[];

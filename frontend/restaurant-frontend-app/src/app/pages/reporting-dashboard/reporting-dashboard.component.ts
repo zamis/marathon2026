@@ -177,16 +177,18 @@ export class ReportingDashboardComponent implements OnInit {
     const selected = this.locations.find((loc) => loc.address === address);
     this.selectedLocationId = selected?.id;
     this.reportData = [];
-    this.selectedLocationAddress = selected?.address;
+    this.selectedLocationAddress = selected?.address ?? undefined;
     console.log('Selected locationId:', this.selectedLocationId);
   }
 
   get locationAddresses(): string[] {
-    return this.locations.map((loc) => loc.address);
+    return this.locations
+      .map((loc) => loc.address)
+      .filter((address): address is string => typeof address === 'string' && !!address.trim());
   }
 
   getSelectedLocationAddress(): string | undefined {
-    return this.locations.find((loc) => loc.id === this.selectedLocationId)?.address;
+    return this.locations.find((loc) => loc.id === this.selectedLocationId)?.address ?? undefined;
   }
 
   genetateReportRequest(): void {

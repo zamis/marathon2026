@@ -548,7 +548,7 @@ export class WaiterDashboardComponent implements OnInit {
       .subscribe({
         next: ({ location, tables }) => {
           this.assignedLocationId.set(location.id);
-          this.assignedLocationName.set(location.address);
+          this.assignedLocationName.set(location.address ?? 'Location unavailable');
           this.tables.set(tables);
 
           this.tableOptions.set([

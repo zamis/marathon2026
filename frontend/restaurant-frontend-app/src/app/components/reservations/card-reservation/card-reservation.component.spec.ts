@@ -36,4 +36,12 @@ describe('CardReservationComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('renders a placeholder instead of throwing when the reservation address is null', () => {
+    fixture.componentRef.setInput('r', { ...RESERVATION, locationAddress: null });
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Location unavailable');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('null');
+  });
 });

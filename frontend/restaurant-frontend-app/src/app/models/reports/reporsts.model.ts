@@ -1,5 +1,5 @@
 export interface ReportRow {
-  locationName: string;
+  locationName: string | null;
   locationId?: string;
   waiterName: string;
   waiterEmail: string;

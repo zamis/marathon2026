@@ -60,7 +60,7 @@ export class WaiterMakeReservationComponent implements OnInit {
 
   user!: UserModel | null;
 
-  locations: { id: string; address: string }[] = [];
+  locations: { id: string; address: string | null }[] = [];
   selectedLocationId?: string;
   selectedLocation?: string;
 
@@ -121,7 +121,11 @@ export class WaiterMakeReservationComponent implements OnInit {
                 (location) => location.id === locationId
               );
 
-              if (waiterLocation) {
+              if (
+                waiterLocation &&
+                typeof waiterLocation.address === 'string' &&
+                waiterLocation.address.trim()
+              ) {
                 this.selectedLocation = waiterLocation.address;
                 this.selectedLocationId = waiterLocation.id;
                 this.loadTables();
@@ -274,7 +278,9 @@ export class WaiterMakeReservationComponent implements OnInit {
   }
 
   get locationAddresses(): string[] {
-    return this.locations.map((loc) => loc.address);
+    return this.locations
+      .map((loc) => loc.address)
+      .filter((address): address is string => typeof address === 'string' && !!address.trim());
   }
 
   get tableNames(): string[] {

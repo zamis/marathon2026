@@ -36,7 +36,7 @@
 
     <p class="body">
       Your pre-order for the reservation
-      <strong>{{ order().reservationAddress }}</strong>,
+      <strong>{{ order().reservationAddress ?? 'Location unavailable' }}</strong>,
       <strong>{{ order().reservationTime }}</strong>
       has been successfully submitted.
     </p>

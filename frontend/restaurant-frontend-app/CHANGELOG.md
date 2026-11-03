@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Added regression coverage for unavailable `/tables` deep links and null-address reservation rendering/editing.
+- Added tables-page regression coverage for rendering location options when an API location address is null.
 - Added owner removal of guest sessions and their pre-orders from open group reservations, applying the server's updated session snapshot after confirmation.
 - Added the owner group pre-order review, consolidated submitted-cart totals, and confirmation flow.
 - Added the group orders API service for session, status, owner-session, invite, and submission requests.
@@ -17,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated the group order page to load live reservation data and handle loading, error, empty, submitted, and closed states.
 
 ### Fixed
+- Used the unavailable location label for null, blank, or whitespace-only table-card addresses.
+- Prevented `/tables` deep links to locations with missing addresses from falling back to an all-location search; nullable reservation, order, and report addresses now render safely.
+- Modeled nullable API location addresses and kept `/tables` filtering null, non-string, and blank values while leaving valid locations selectable.
 - Prevented an in-flight pre-removal poll from restoring a removed guest over the successful DELETE snapshot.
 - Applied successful background status refreshes even when sessions refresh fails, retaining the last successful sessions data and stopping polling for non-Open groups.
 - Kept the background-refresh failure warning visible with the last-good timestamp after a successful non-Open status update.

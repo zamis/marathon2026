@@ -9,7 +9,7 @@ export interface Reservation {
   endTime: Date;
   guestCount: number;
   status: ReservationStatus;
-  locationAddress: string;
+  locationAddress: string | null;
   tableCapacity: number;
   restaurantName?: string;
   waiterId: string;
@@ -34,7 +34,7 @@ export interface ReservationCustomer {
   guestCount: number;
   status: ReservationStatusCustomer;
   restaurantName: string;
-  locationAddress: string;
+  locationAddress: string | null;
   feedback?: FeedbackReservationResponseItem;
   tableName?: string;
   customerId?: string;

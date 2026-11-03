@@ -2,7 +2,7 @@
   <div class="text">
     <span class="body-bold">
       Pre-order #{{ order().orderId }}
-      ({{ order().reservationAddress }}, {{ order().reservationTime }})
+      ({{ order().reservationAddress ?? 'Location unavailable' }}, {{ order().reservationTime }})
     </span>
 
     @for (item of order().orderItems; track item.dish.id) {
